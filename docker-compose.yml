@@ -1,6 +1,6 @@
 services:
   redpanda:
-    image: redpanda/redpanda:latest
+    image: redpandadata/redpanda:latest
     command:
       - redpanda start
       - --smp 1
@@ -8,7 +8,7 @@ services:
       - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
       - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
     ports:
-      - "9092:9092"
+      - "19092:19092"
   postgres:
     image: postgres:16
     environment:
