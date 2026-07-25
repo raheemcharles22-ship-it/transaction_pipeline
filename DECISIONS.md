@@ -7,3 +7,7 @@
 - Use Redpanda as the Kafka-compatible message broker instead of a full Kafka deployment because it offers a similar API and developer experience while being easier to run locally for a small pipeline.
 - Expose Redpanda on host port 19092 for local development because it avoids conflicts with other common local services and keeps the broker accessible from the host machine.
 - Keep the project’s local developer workflow simple by using Make targets for common commands such as starting and stopping services because that reduces setup friction and makes the workflow easier to follow.
+- Model transactions around a generated ID plus an idempotency key that defaults to the same value for normal events, because this keeps single delivery semantics straightforward while still allowing duplicate-retry scenarios to be handled explicitly.
+- Support a chaos mode in the event generator so the producer can simulate duplicate keys and malformed payloads during development, which makes it easier to test consumer behavior under imperfect input.
+- Prefer deterministic tests for the event package over probabilistic assertions, because they make regressions easier to diagnose and keep the test suite stable across runs.
+- Make the transaction generator resilient to nil inputs by providing safe defaults for the random source, merchant list, and seen-key state, because that avoids crashes when the producer is initialized with minimal configuration.
