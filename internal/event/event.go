@@ -52,11 +52,3 @@ func EncodePayload(tx Transaction, r *rand.Rand, chaos bool, chaosRate float64) 
 	}
 	return json.Marshal(tx)
 }
-
-func generateRandomIndex(max int) int {
-	return int(time.Now().UnixNano() % int64(max))
-}
-
-func generateRandomAmount() int64 {
-	return int64(generateRandomIndex(10000)) // Random amount between 0 and 9999 cents
-}
