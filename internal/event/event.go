@@ -21,6 +21,17 @@ type Transaction struct {
 // fraction of events reuse a prior idempotency key from seenKeys — simulating
 // a duplicate/redelivered message.
 func GenerateTransaction(r *rand.Rand, merchantIDs []string, chaos bool, chaosRate float64, seenKeys *[]string) Transaction {
+	if r == nil {
+		r = rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
+	}
+	if len(merchantIDs) == 0 {
+		merchantIDs = []string{"unknown-merchant"}
+	}
+	if seenKeys == nil {
+		var local []string
+		seenKeys = &local
+	}
+
 	id := uuid.NewString()
 	idemKey := id
 
