@@ -3,6 +3,8 @@ TOPIC ?= transactions
 RATE ?= 10
 COUNT ?= 0
 CHAOS_RATE ?= 0.1
+DB_DSN ?= postgres://pipeline:pipeline@localhost:5432/transactions
+
 
 up:
 	docker compose up -d
@@ -26,4 +28,7 @@ run-producer-chaos:
 	$(MAKE) run-producer CHAOS=--chaos
 
 run-consumer:
-	go run ./cmd/consumer
+	go run ./cmd/consumer \
+		--brokers=$(BROKERS) \
+		--topic=$(TOPIC) \
+		--db-dsn=$(DB_DSN)
