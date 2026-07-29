@@ -96,7 +96,11 @@ func main() {
 		Addr:  kafka.TCP(*brokers),
 		Topic: "transactions.dlq",
 	}
-	defer dlqWriter.Close()
+	defer func() {
+		if err := dlqWriter.Close(); err != nil {
+			log.Printf("error closing dlq writer: %v", err)
+		}
+	}()
 
 	for {
 		m, err := r.FetchMessage(ctx)
@@ -117,7 +121,9 @@ func main() {
 				log.Printf("DLQ write failed, leaving uncommitted for redelivery: %v", dlqErr)
 				continue
 			}
-			r.CommitMessages(ctx, m)
+			if err := r.CommitMessages(ctx, m); err != nil {
+				log.Printf("error committing message offset: %v", err)
+			}
 			continue
 		}
 
@@ -132,7 +138,9 @@ func main() {
 		} else {
 			log.Printf("transaction skipped due to duplicate idempotency key: %s", tx.IdempotencyKey)
 		}
-		r.CommitMessages(ctx, m)
+		if err := r.CommitMessages(ctx, m); err != nil {
+			log.Printf("error committing message offset: %v", err)
+		}
 
 	}
 
