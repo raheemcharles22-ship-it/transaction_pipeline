@@ -9,6 +9,7 @@ services:
       - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
     ports:
       - "19092:19092"
+      - "9644:9644"
   postgres:
     image: postgres:16
     environment:
@@ -19,3 +20,18 @@ services:
       - "5432:5432"
     volumes:
       - ./migrations:/docker-entrypoint-initdb.d
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/dashboards:/var/lib/grafana/dashboards

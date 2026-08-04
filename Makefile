@@ -32,3 +32,6 @@ run-consumer:
 		--brokers=$(BROKERS) \
 		--topic=$(TOPIC) \
 		--db-dsn=$(DB_DSN)
+
+metrics-up:
+	docker compose up -d prometheus grafana
