@@ -24,7 +24,11 @@ func TestConsumerIntegration_ChaosScenario(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to start redpanda: %v", err)
 	}
-	defer testcontainers.TerminateContainer(redpandaC)
+	defer func() {
+		if err := testcontainers.TerminateContainer(redpandaC); err != nil {
+			t.Fatalf("failed to terminate redpanda container: %v", err)
+		}
+	}()
 
 	postgresC, err := postgres.Run(ctx, "postgres:16-alpine",
 		postgres.WithDatabase("transactions"),
@@ -36,7 +40,11 @@ func TestConsumerIntegration_ChaosScenario(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to start postgres: %v", err)
 	}
-	defer testcontainers.TerminateContainer(postgresC)
+	defer func() {
+		if err := testcontainers.TerminateContainer(postgresC); err != nil {
+			t.Fatalf("failed to terminate postgres container: %v", err)
+		}
+	}()
 
 	brokerAddr, err := redpandaC.KafkaSeedBroker(ctx)
 	if err != nil {
@@ -52,7 +60,11 @@ func TestConsumerIntegration_ChaosScenario(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to dial broker: %v", err)
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			t.Fatalf("failed to close kafka connection: %v", err)
+		}
+	}()
 	if err := conn.CreateTopics(
 		kafka.TopicConfig{Topic: "transactions", NumPartitions: 1, ReplicationFactor: 1},
 		kafka.TopicConfig{Topic: "transactions.dlq", NumPartitions: 1, ReplicationFactor: 1},
@@ -62,7 +74,11 @@ func TestConsumerIntegration_ChaosScenario(t *testing.T) {
 
 	// produce a known chaos batch using the real event package, no subprocess needed
 	writer := &kafka.Writer{Addr: kafka.TCP(brokerAddr), Topic: "transactions"}
-	defer writer.Close()
+	defer func() {
+		if err := writer.Close(); err != nil {
+			t.Fatalf("failed to close kafka writer: %v", err)
+		}
+	}()
 
 	r := rand.New(rand.NewPCG(1, 2)) // fixed seed: deterministic test
 	var seenKeys []string
@@ -89,19 +105,31 @@ func TestConsumerIntegration_ChaosScenario(t *testing.T) {
 			}
 		}
 
-		writer.WriteMessages(ctx, kafka.Message{Key: []byte(tx.MerchantID), Value: payload})
+		if err := writer.WriteMessages(ctx, kafka.Message{Key: []byte(tx.MerchantID), Value: payload}); err != nil {
+			t.Fatalf("failed to write message %d: %v", i, err)
+		}
 	}
 	// run the real consumer against the ephemeral infra
 	pool, err := db.NewPool(ctx, dsn)
 	if err != nil {
 		t.Fatalf("failed to connect to postgres: %v", err)
 	}
-	defer pool.Close()
+	defer func() {
+		pool.Close()
+	}()
 
 	reader := kafka.NewReader(kafka.ReaderConfig{Brokers: []string{brokerAddr}, Topic: "transactions", GroupID: "test-consumer"})
-	defer reader.Close()
+	defer func() {
+		if err := reader.Close(); err != nil {
+			t.Fatalf("failed to close kafka reader: %v", err)
+		}
+	}()
 	dlqWriter := &kafka.Writer{Addr: kafka.TCP(brokerAddr), Topic: "transactions.dlq"}
-	defer dlqWriter.Close()
+	defer func() {
+		if err := dlqWriter.Close(); err != nil {
+			t.Fatalf("failed to close dlq writer: %v", err)
+		}
+	}()
 
 	runCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
@@ -109,11 +137,23 @@ func TestConsumerIntegration_ChaosScenario(t *testing.T) {
 
 	// assert: every produced event is accounted for
 	var rowCount int
-	pool.QueryRow(ctx, "SELECT count(*) FROM transactions").Scan(&rowCount)
+	if err := pool.QueryRow(ctx, "SELECT count(*) FROM transactions").Scan(&rowCount); err != nil {
+		t.Fatalf("failed to count transactions rows: %v", err)
+	}
 
-	dlqConn, _ := kafka.Dial("tcp", brokerAddr)
-	defer dlqConn.Close()
-	dlqPartitions, _ := dlqConn.ReadPartitions("transactions.dlq")
+	dlqConn, err := kafka.Dial("tcp", brokerAddr)
+	if err != nil {
+		t.Fatalf("failed to dial dlq broker: %v", err)
+	}
+	defer func() {
+		if err := dlqConn.Close(); err != nil {
+			t.Fatalf("failed to close dlq connection: %v", err)
+		}
+	}()
+	dlqPartitions, err := dlqConn.ReadPartitions("transactions.dlq")
+	if err != nil {
+		t.Fatalf("failed to read dlq partitions: %v", err)
+	}
 	var dlqCount int64
 	for _, p := range dlqPartitions {
 		conn, err := kafka.DialLeader(ctx, "tcp", brokerAddr, "transactions.dlq", p.ID)
@@ -121,7 +161,9 @@ func TestConsumerIntegration_ChaosScenario(t *testing.T) {
 			t.Fatalf("dial dlq partition %d: %v", p.ID, err)
 		}
 		first, last, err := conn.ReadOffsets()
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			t.Fatalf("failed to close dlq partition connection for %d: %v", p.ID, err)
+		}
 		if err != nil {
 			t.Fatalf("read offsets for dlq partition %d: %v", p.ID, err)
 		}
