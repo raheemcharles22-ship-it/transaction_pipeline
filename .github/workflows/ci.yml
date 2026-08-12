@@ -12,3 +12,14 @@ jobs:
         with:
           version: v2.6.2
       - run: go test ./...
+python-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e "aggregator/.[dev]"
+      - run: ruff check aggregator/
+      - run: mypy aggregator/
+      - run: pytest aggregator/

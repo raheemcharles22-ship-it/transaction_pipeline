@@ -35,3 +35,9 @@ run-consumer:
 
 metrics-up:
 	docker compose up -d prometheus grafana
+
+run-aggregator:
+	cd aggregator && uvicorn main:app --reload --port 8000
+
+test-aggregator:
+	cd aggregator && pytest	
