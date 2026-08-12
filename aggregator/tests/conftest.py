@@ -3,7 +3,6 @@ from collections.abc import AsyncGenerator
 
 import asyncpg
 import pytest_asyncio
-import pathlib
 from testcontainers.postgres import PostgresContainer
 
 MIGRATION_SQL = (pathlib.Path(__file__).parent.parent.parent / "migrations" / "001_init.sql").read_text()
