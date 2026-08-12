@@ -3,9 +3,10 @@ from collections.abc import AsyncGenerator
 
 import asyncpg
 import pytest_asyncio
+import pathlib
 from testcontainers.postgres import PostgresContainer
 
-MIGRATION_SQL = pathlib.Path("../migrations/001_init.sql").read_text()
+MIGRATION_SQL = (pathlib.Path(__file__).parent.parent.parent / "migrations" / "001_init.sql").read_text()
 SEED_SQL = """
 INSERT INTO transactions (id, merchant_id, amount_cents, currency, occurred_at, idempotency_key) VALUES
 ('00000000-0000-0000-0000-000000000001', 'm1', 1000, 'USD', now() - interval '6 hours', 'k1'),
