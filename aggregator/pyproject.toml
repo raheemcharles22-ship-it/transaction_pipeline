@@ -22,6 +22,9 @@ dev = [
     "mypy>=1.9",
 ]
 
+[tool.setuptools]
+py-modules = ["main", "queries", "models"]
+
 [tool.ruff]
 line-length = 100
 
