@@ -20,6 +20,6 @@ jobs:
           with:
             python-version: "3.11"
         - run: pip install -e "aggregator/.[dev]"
-        - run: ruff check aggregator/
-        - run: mypy aggregator/
-        - run: pytest aggregator/
+        - run: cd aggregator && mypy .    
+        - run: ruff check .  
+        - run: pytest .
